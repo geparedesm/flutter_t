@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_t/src/blocs/auth/auth_bloc.dart';
+import 'package:flutter_t/src/blocs/navigation/navigation_bloc.dart';
+import 'package:flutter_t/src/helpers/helpers.dart';
 import 'package:flutter_t/src/pages/auth/login.dart';
+import 'package:flutter_t/src/pages/auth/signin.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_t/src/pages/home.dart';
+import 'package:flutter_t/src/pages/navigation/navigation_page.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final preferences = Preferences();
+  await preferences.init();
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -58,29 +73,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  void _incrementCounter() {}
   @override
   Widget build(BuildContext context) {
+    final preferences = Preferences();
+    String principalPage;
+    if (preferences.user == "") {
+      principalPage = '/login';
+    } else {
+      principalPage = '/home';
+    }
     return Scaffold(
       body: Center(
           child: MultiBlocProvider(
               providers: [
-            BlocProvider(
-              create: (context) => AuthBloc(),
+            BlocProvider<NavigationBloc>(
+              create: (context) => NavigationBloc(),
+            ),
+            BlocProvider<AuthBloc>(
+              create: (context) => AuthBloc(context.read<NavigationBloc>()),
             ),
           ],
               child: MaterialApp(
                 title: 'GP Security App',
                 debugShowCheckedModeBanner: false,
-                home: const Login(),
-                initialRoute: '/login',
+                home: const NavigationPage(),
+                initialRoute: principalPage,
                 routes: {
                   // '/test': (BuildContext context) => const TestPage(),
-                  '/login': (BuildContext context) => const Login(),
+                  '/login': (BuildContext context) => const LoginPage(),
+                  '/signin': (BuildContext context) => const SignInPage(),
+                  '/home': (BuildContext context) => const HomePage(),
                 },
                 theme: ThemeData(
                     colorScheme: const ColorScheme(
-                        primary: Color(0xff87D1E6),
+                        // ignore: use_full_hex_values_for_flutter_colors
+                        primary: Color(0xfffd6e2ea),
                         secondary: Colors.blue,
                         surface: Colors.black,
                         background: Colors.green,
@@ -92,11 +119,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         onError: Colors.red,
                         brightness: Brightness.light)),
               ))),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
